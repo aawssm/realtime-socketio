@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Real Time Update using Socket.IO</title>
+    <link rel="stylesheet" href="./index.css" />
+</head>
+
+<body>
+    <form id="listCityForm">
+        <br />
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" />
+        <br />
+        <label for="state">State:</label>
+        <input type="text" id="state" name="state" />
+        <br />
+        <label for="country">Country:</label>
+        <input type="text" id="country" name="country" />
+        <br />
+        <label for="capital">Capital:</label>
+        <input type="checkbox" id="capital" name="capital" />
+        <br />
+        <label for="population">Population:</label>
+        <input type="number" id="population" name="population" />
+        <br />
+        <input type="submit" value="Filter" />
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>State</th>
+                <th>Country</th>
+                <th>Capital</th>
+                <th>Population</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="citiesList"></tbody>
+    </table>
+    <div class="add-city-container">
+        <a href="/createCity">
+            <button>Add City</button>
+        </a>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        //changed to "window.location.href" to make it work with github codespaces
+        // const socket = io("http://localhost:3000/city");
+        var conUrl = window.location.href.replace("#", "");
+        const socket = io(conUrl);
+        const citiesList = document.getElementById("citiesList");
+        let citiesLS = [];
+        let cQuery;
+        window.addEventListener("load", socket.emit("init"));
+
+        const form = document.getElementById("listCityForm");
+        form.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const query = {
+                name: form.elements.name.value,
+                state: form.elements.state.value,
+                country: form.elements.country.value,
+                capital: form.elements.capital.checked,
+                population: form.elements.population.value,
+            };
+            // emit the queryCities event with the query
+            // socket.emit("queryCities", query);
+            if (cQuery !== undefined) socket.emit("unsubscribe", cQuery);
+            let isNull = true;
+            Object.keys(query).forEach((key) => {
+                if (key !== "capital") {
+                    console.log(key, query[key], !query[key]);
+                    if (isNull) isNull = !query[key];
+                }
+            });
+            if (isNull) {
+                console.log("listen to everything");
+                cQuery = undefined;
+                socket.emit("init");
+            } else {
+                cQuery = query;
+                socket.emit("query", query);
+                socket.emit("subscribe", query);
+            }
+        });
+
+        ///////////////////////////////////////////////////////////////////////////////////
+
+        // Listen for 'init' events to receive the current list of cities
+        socket.on("init", function (cities) {
+            console.log("Received initial list of cities:", cities);
+            citiesLS = cities;
+            addCityToPage(citiesLS, true);
+        });
+
+        // Listen for 'create' events to receive updates about new cities
+        socket.on("create", function (city) {
+            console.log("Received update about new city:", city);
+            if (cQuery === undefined) isAddOrEditDelete(city);
+        });
+
+        // Listen for 'update' events to receive updates about updated cities
+        socket.on("update", function (city) {
+            console.log("Received update about updated city:", city);
+            if (cQuery === undefined) isAddOrEditDelete(city);
+        });
+
+        // Listen for 'delete' events to receive updates about deleted cities
+        socket.on("delete", function (name) {
+            console.log("Received update about deleted city:", name);
+
+
+            if (cQuery === undefined) isAddOrEditDelete({ name: name, isDelete: true });
+
+        });
+
+        // Listen for 'query' events to receive the result of a query
+        socket.on("query", function (result) {
+            console.log("Received query result:", result);
+            citiesLS = result;
+            addCityToPage(citiesLS, true);
+        });
+
+        // Listen for 'dynamic query' event to receive updates about cities that match a dynamic query
+        socket.on("dynamic query", function (city) {
+            console.log(
+                "Received update about city that match dynamic query:",
+                city
+            );
+            if (cQuery !== undefined) isAddOrEditDelete(city);
+
+        });
+
+        // // Send a 'create' event to the server to create a new city
+        // function createCity(city) {
+        //   socket.emit("create", city);
+        // }
+
+        // // Send an 'update' event to the server to update a city
+        // function updateCity(city) {
+        //   socket.emit("update", city);
+        // }
+
+        // Send a 'delete' event to the server to delete a
+        function deleteCity(name) {
+            socket.emit("delete", name);
+        }
+
+        // Send a 'query' event to the server to query the cities
+        function queryCities(query) {
+            socket.emit("query", query);
+            citiesLS = query;
+            addCityToPage(citiesLS, true);
+        }
+
+        // Send a 'subscribe' event to the server to subscribe to a dynamic query
+        function subscribeToDynamicQuery(query) {
+            socket.emit("subscribe", query);
+        }
+
+        // Send an 'unsubscribe' event to the server to unsubscribe from a dynamic query
+        function unsubscribeFromDynamicQuery(query) {
+            socket.emit("unsubscribe", query);
+        }
+        ///////////////////////////////////////////////////////////////////////////////////
+        function isAddOrEditDelete(city) {
+            console.log(`isAddOrEditDelete`)
+            const index = citiesLS.findIndex((c) => c.name.toLowerCase() == city.name.toLowerCase());
+            console.log(`${index} ${city.name}`)
+            if (city.isDelete === true && index > -1) {
+                return citiesLS.splice(index, 1);
+            } else {
+                if (index !== -1) {
+                    citiesLS[index] = city;
+                } else {
+                    citiesLS.push(city);
+                }
+            }
+
+            addCityToPage(citiesLS, true);
+        }
+
+        function addCityToPage(cities, isClear = false) {
+            if (isClear) citiesList.innerHTML = "";
+            citiesLS.forEach((city) => {
+                const row = document.createElement("tr");
+                row.innerHTML = cityToHml(city);
+                citiesList.appendChild(row);
+            });
+        }
+
+        function cityToHml(city) {
+            return `
+        <td>${city.name}</td>
+        <td>${city.state}</td>
+        <td>${city.country}</td>
+        <td>${city.capital}</td>
+        <td>${city.population}</td>
+        <td>
+          <a href="#" onclick="deleteCity('${city.name}')">Delete</a>
+        </td>
+      `;
+        }
+      // <a href="#" onclick="editCity('${city.name}')">Edit</a>
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,28 @@
+<link rel="stylesheet" href="./index.css" />
+<form id="updateCityForm">
+    <label for="name">Name:</label>
+    <input type="text" id="name" name="name" value="<%= city.name %>" required />
+    <br />
+    <label for="population">Population:</label>
+    <input type="number" id="population" name="population" value="<%= city.population %>" required />
+    <br />
+    <input type="submit" value="Update City" />
+</form>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    //changed to "window.location.href" to make it work with github codespaces
+    // const socket = io("http://localhost:3000/city");
+    var conUrl = window.location.href.replace("updateCity", "");
+    const socket = io(conUrl);
+    const form = document.getElementById("updateCityForm");
+    form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const city = {
+            name: form.elements.name.value,
+            population: form.elements.population.value,
+        };
+        // emit the updateCity event with the updated city
+        socket.emit("update", city);
+    });
+</script>

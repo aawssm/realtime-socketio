@@ -1,0 +1,41 @@
+<link rel="stylesheet" href="./index.css" />
+<form id="createCityForm">
+    <label for="name">Name:</label>
+    <input type="text" id="name" name="name" value="City" required />
+    <br />
+    <label for="state">State:</label>
+    <input type="text" id="state" name="state" value="State" required />
+    <br />
+    <label for="country">Country:</label>
+    <input type="text" id="country" name="country" value="USA" required />
+    <br />
+    <label for="capital">Capital:</label>
+    <input type="checkbox" id="capital" name="capital" />
+    <br />
+    <label for="population">Population:</label>
+    <input type="number" id="population" name="population" value="300000" required />
+    <br />
+    <input type="submit" value="Create City" />
+</form>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    //changed to "window.location.href" to make it work with github codespaces
+    // const socket = io("http://localhost:3000/city");
+    var conUrl = window.location.href.replace("createCity", "");
+    console.log(conUrl);
+    const socket = io(conUrl);
+    const form = document.getElementById("createCityForm");
+    form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const city = {
+            name: form.elements.name.value,
+            state: form.elements.state.value,
+            country: form.elements.country.value,
+            capital: form.elements.capital.checked,
+            population: form.elements.population.value,
+        };
+        // emit the createCity event with the new city
+        console.log(city);
+        socket.emit("create", city);
+    });
+</script>
