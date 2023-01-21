@@ -2,7 +2,8 @@
 This project is a tutorial on how to create a real-time database system using Node.js and Socket.io, similar to Firebase. The tutorial covers subscribing to single documents, collections, and sub-collections using a query.
 
 Getting Started
-[YouTube Video](https://youtu.be/P1OwhW352MY)
+
+### [YouTube Video](https://youtu.be/P1OwhW352MY) is not a bad place to start
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
